@@ -86,31 +86,31 @@ router.post('/', (req, res, next) => {
             req.body[field].trim().length > sizedFields[field].max
   );
 
-  if (tooSmallField || tooLargeField) {
-    return res.status(422).json({
-      code: 422,
-      reason: 'ValidationError',
-      message: tooSmallField
-        ? `Must be at least ${sizedFields[tooSmallField]
-          .min} characters long`
-        : `Must be at most ${sizedFields[tooLargeField]
-          .max} characters long`,
-      location: tooSmallField || tooLargeField
-    });
-  }
+  // if (tooSmallField || tooLargeField) {
+  //   return res.status(422).json({
+  //     code: 422,
+  //     reason: 'ValidationError',
+  //     message: tooSmallField
+  //       ? `Must be at least ${sizedFields[tooSmallField]
+  //         .min} characters long`
+  //       : `Must be at most ${sizedFields[tooLargeField]
+  //         .max} characters long`,
+  //     location: tooSmallField || tooLargeField
+  //   });
+  // }
 
   // *QUESTION - syntax to write the if block in this format? with the || operators.
-  // if (tooSmallField || tooLargeField) {
-  //   const err = New Error(`${tooSmallField}`
-  //     ? `Must be at least ${sizedFields[tooSmallField]
-  //       .min} characters long`
-  //     : `Must be at most ${sizedFields[tooLargeField]
-  //       .max} characters long`);
-  //   err.status = 422;
-  //   err.location = `${tooSmallField}` || `${tooLargeField}`;
-  //   err.reason = 'ValidationError',
-  //   return next(err);
-  // }
+  if (tooSmallField || tooLargeField) {
+    const err = new Error(`${tooSmallField}`
+      ? `Must be at least ${sizedFields[tooSmallField]
+        .min} characters long`
+      : `Must be at most ${sizedFields[tooLargeField]
+        .max} characters long`);
+    err.status = 422;
+    err.location = `${tooSmallField}` || `${tooLargeField}`;
+    err.reason = 'ValidationError';
+    return next(err);
+  }
 
 
   return User.hashPassword(password)
