@@ -18,9 +18,9 @@ schema.set('toJSON', {
   }
 });
 
-schema.methods.validatePassword = function (password) {
-  return password === this.password;
-};
+// schema.methods.validatePassword = function (password) {
+//   return password === this.password;
+// };
 
 schema.methods.validatePassword = function (password) {
   return bcrypt.compare(password, this.password);
