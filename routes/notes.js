@@ -3,6 +3,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Note = require('../models/note');
+const Folder = require('../models/folder');
+const Tag = require('../models/tag');
 const router = express.Router();
 const passport = require('passport');
 // Protect endpoints using JWT Strategy
@@ -78,27 +80,55 @@ router.post('/', (req, res, next) => {
     return next(err);
   }
 
-  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
-    const err = new Error('The `folderId` is not valid');
-    err.status = 400;
-    return next(err);
+  const newNote = { title, content, folderId, tags, userId };
+  if (newNote.folderId === '') {
+    delete newNote.folderId;
   }
 
-  if (tags) {
+  function validateFolderId(folderId, userId) {
+    // verifies that folderId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(folderId)) {
+      const err = new Error('The `folderId` is not valid');
+      err.status = 400;
+      return next(err);
+    }
+
+    // verifies that the item belongs to the current user
+    return Folder.findOne({ _id: folderId, userId }).count()
+      .then(count => {
+        if (count === 0) {
+          const err = new Error('The `folderId` is not valid');
+          err.status = 400;
+          return next(err);
+        }
+      });
+  }
+
+  function validateTagId(tags, userId) {
+    // verifies that the tags property is an Array
+    if (!Array.isArray(tags)) {
+      const err = new Error('The `tags` property must be an array');
+      err.status = 400;
+      return next(err);
+    }
+    
+    // verifies each tag id in the array is a valid ObjectId
     const badIds = tags.filter((tag) => !mongoose.Types.ObjectId.isValid(tag));
     if (badIds.length) {
       const err = new Error('The `tags` array contains an invalid `id`');
       err.status = 400;
       return next(err);
     }
+
+    // verifies that all the tags belong to the current user
+    
   }
 
-  const newNote = { title, content, folderId, tags, userId };
-  if (newNote.folderId === '') {
-    delete newNote.folderId;
-  }
-
-  Note.create(newNote)
+  Promise.all([
+    validateFolderId(newNote.folderId, userId),
+    validateTagId(newNote.tags, userId)
+  ])
+    .then(() => Note.create(newNote))
     .then(result => {
       res.location(`${req.originalUrl}/${result.id}`).status(201).json(result);
     })
