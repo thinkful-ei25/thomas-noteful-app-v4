@@ -53,8 +53,9 @@ router.get('/:id', (req, res, next) => {
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
   const { name } = req.body;
+  const userId = req.user.id;
 
-  const newFolder = { name };
+  const newFolder = { name, userId };
 
   /***** Never trust users - validate input *****/
   if (!name) {
