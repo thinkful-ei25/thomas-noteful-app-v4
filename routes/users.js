@@ -6,8 +6,9 @@ const router = express.Router();
 
 /* ========== POST (/api/users) USER ENDPOINT ========== */
 router.post('/', (req, res, next) => {
-  const { fullname, username, password } = req.body;
-
+  let { fullname, username, password } = req.body;
+  fullname = fullname.trim();
+  
   const requiredFields = ['username', 'password'];
   const missingField = requiredFields.find(field => !(field in req.body));
   // username and password fields required - check for missing fields and throw error
@@ -51,7 +52,7 @@ router.post('/', (req, res, next) => {
 
   // the username and password should not have leading or trailing whitespace. 
   // and the endpoint should not automatically trim the values.
-  const explicityTrimmedFields = ['username', 'password', 'fullname'];
+  const explicityTrimmedFields = ['username', 'password'];
   const nonTrimmedField = explicityTrimmedFields.find(
     field => req.body[field].trim() !== req.body[field]
   );
