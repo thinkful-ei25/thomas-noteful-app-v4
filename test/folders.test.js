@@ -5,12 +5,13 @@ const chaiHttp = require('chai-http');
 const mongoose = require('mongoose');
 const express = require('express');
 const sinon = require('sinon');
-
 const app = require('../server');
 const Folder = require('../models/folder');
 const Note = require('../models/note');
-const { folders, notes } = require('../db/data');
-const { TEST_MONGODB_URI } = require('../config');
+const User = require('../models/user');
+const { folders, notes, users } = require('../db/data');
+const { TEST_MONGODB_URI, JWT_SECRET } = require('../config');
+const jwt = require('jsonwebtoken');
 
 chai.use(chaiHttp);
 const expect = chai.expect;
@@ -26,18 +27,27 @@ describe('Noteful API - Folders', function () {
       ]));
   });
 
+  let token;
+  let user;
+
   beforeEach(function () {
     return Promise.all([
+      User.insertMany(users),
       Folder.insertMany(folders),
-      Note.insertMany(notes)
-    ]);
+      Folder.createIndexes()
+    ])
+      .then(([users]) => {
+        user = users[0];
+        token = jwt.sign({ user }, JWT_SECRET, { subject: user.username });
+      });
   });
 
   afterEach(function () {
     sandbox.restore();
     return Promise.all([
       Note.deleteMany(), 
-      Folder.deleteMany()
+      Folder.deleteMany(),
+      User.deleteMany()
     ]);
   });
 
@@ -47,11 +57,13 @@ describe('Noteful API - Folders', function () {
   
   describe('GET /api/folders', function () {
 
-    it('should return a list sorted with the correct number of folders', function () {
-      return Promise.all([
-        Folder.find().sort('name'),
-        chai.request(app).get('/api/folders')
-      ])
+    it('should return the correct number of folders', function () {
+      const dbPromise = Folder.find({userId: user.id});
+      const apiPromise = chai.request(app)
+        .get('/api/folders')
+        .set('Authorization', `Bearer ${token}`); // <<== Add this
+
+      return Promise.all([dbPromise, apiPromise])
         .then(([data, res]) => {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
@@ -60,11 +72,14 @@ describe('Noteful API - Folders', function () {
         });
     });
 
-    it('should return a list sorted by name with the correct fields and values', function () {
-      return Promise.all([
-        Folder.find().sort('name'),
-        chai.request(app).get('/api/folders')
-      ])
+
+    it('should return a list with the correct right fields', function () {
+      const dbPromise = Folder.find({ userId: user.id }); // <<== Add filter on User Id
+      const apiPromise = chai.request(app)
+        .get('/api/folders')
+        .set('Authorization', `Bearer ${token}`); // <<== Add Authorization header
+  
+      return Promise.all([dbPromise, apiPromise])
         .then(([data, res]) => {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
@@ -72,7 +87,7 @@ describe('Noteful API - Folders', function () {
           expect(res.body).to.have.length(data.length);
           res.body.forEach(function (item, i) {
             expect(item).to.be.a('object');
-            expect(item).to.have.all.keys('id', 'name', 'createdAt', 'updatedAt');
+            expect(item).to.have.all.keys('id', 'name', 'userId', 'createdAt', 'updatedAt');
             expect(item.id).to.equal(data[i].id);
             expect(item.name).to.equal(data[i].name);
             expect(new Date(item.createdAt)).to.eql(data[i].createdAt);
@@ -83,18 +98,21 @@ describe('Noteful API - Folders', function () {
 
     it('should catch errors and respond properly', function () {
       sandbox.stub(Folder.schema.options.toJSON, 'transform').throws('FakeError');
-      return chai.request(app).get('/api/folders')
-        .then(res => {
+      const dbPromise = Folder.find({userId: user.id});
+      const apiPromise = chai.request(app)
+        .get('/api/folders')
+        .set('Authorization', `Bearer ${token}`); // <<== Add this
+      return Promise.all([dbPromise, apiPromise])
+        .then(([data, res]) => {
           expect(res).to.have.status(500);
           expect(res).to.be.json;
           expect(res.body).to.be.a('object');
-          expect(res.body.message).to.equal('Internal Server Error');
         });
     });
 
   });
 
-  describe('GET /api/folders/:id', function () {
+  describe.only('GET /api/folders/:id', function () {
 
     it('should return correct folder', function () {
       let data;
