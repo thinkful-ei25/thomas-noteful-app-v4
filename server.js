@@ -59,12 +59,16 @@ app.use((req, res, next) => {
 app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   // console.log('err', err);
-  res.json({
-    message: err.message,
-    error: app.get('env') === 'development' ? err : {},
-    reason: err.reason,
-    location: err.location
-  });
+  if (!err.status) {
+    res.status(500).json({ message: 'Internal Server Error' });
+  } else {
+    res.json({
+      message: err.message,
+      error: app.get('env') === 'development' ? err : {},
+      reason: err.reason,
+      location: err.location
+    });
+  }
 });
 
 // Listen for incoming connections

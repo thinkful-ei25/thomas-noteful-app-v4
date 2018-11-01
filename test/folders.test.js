@@ -5,6 +5,7 @@ const chaiHttp = require('chai-http');
 const mongoose = require('mongoose');
 const express = require('express');
 const sinon = require('sinon');
+
 const app = require('../server');
 const Folder = require('../models/folder');
 const Note = require('../models/note');
@@ -263,7 +264,7 @@ describe('Noteful API - Folders', function () {
           expect(res).to.have.status(500);
           expect(res).to.be.json;
           expect(res.body).to.be.a('object');
-          // expect(res.body.message).to.equal('Internal Server Error');
+          expect(res.body.message).to.equal('Internal Server Error');
         });
     });
 
@@ -386,13 +387,13 @@ describe('Noteful API - Folders', function () {
           expect(res).to.have.status(500);
           expect(res).to.be.json;
           expect(res.body).to.be.a('object');
-          // expect(res.body.message).to.equal('Internal Server Error');
+          expect(res.body.message).to.equal('Internal Server Error');
         });
     });
 
   });
 
-  describe.only('DELETE /api/folders/:id', function () {
+  describe('DELETE /api/folders/:id', function () {
 
     it('should delete an existing folder and respond with 204', function () {
       let data;
@@ -453,10 +454,8 @@ describe('Noteful API - Folders', function () {
           expect(res).to.have.status(500);
           expect(res).to.be.json;
           expect(res.body).to.be.a('object');
-          // expect(res.body.message).to.equal('Internal Server Error');
+          expect(res.body.message).to.equal('Internal Server Error');
         });
     });
-
   });
-
 });

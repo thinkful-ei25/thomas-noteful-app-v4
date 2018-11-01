@@ -10,8 +10,10 @@ const app = require('../server');
 const Tag = require('../models/tag');
 const Note = require('../models/note');
 const Folder = require('../models/folder');
-const { folders, notes, tags } = require('../db/data');
-const { TEST_MONGODB_URI } = require('../config');
+const User = require('../models/user');
+const { folders, notes, tags, users } = require('../db/data');
+const { TEST_MONGODB_URI, JWT_SECRET } = require('../config');
+const jwt = require('jsonwebtoken');
 
 chai.use(chaiHttp);
 const expect = chai.expect;
@@ -28,12 +30,21 @@ describe('Noteful API - Notes', function () {
       ]));
   });
 
+  let token;
+  let user;
+
   beforeEach(function () {
     return Promise.all([
       Note.insertMany(notes),
       Folder.insertMany(folders),
-      Tag.insertMany(tags)
-    ]);
+      Tag.insertMany(tags),
+      User.insertMany(users),
+      Note.createIndexes()
+    ])
+      .then(([users]) => {
+        user = users[0];
+        token = jwt.sign({ user }, JWT_SECRET, { subject: user.username });
+      });
   });
 
   afterEach(function () {
@@ -41,7 +52,8 @@ describe('Noteful API - Notes', function () {
     return Promise.all([
       Note.deleteMany(),
       Folder.deleteMany(),
-      Tag.deleteMany()
+      Tag.deleteMany(),
+      User.deleteMany()
     ]);
   });
 
@@ -49,12 +61,13 @@ describe('Noteful API - Notes', function () {
     return mongoose.disconnect();
   });
 
-  describe('GET /api/notes', function () {
+  describe.only('GET /api/notes', function () {
 
     it('should return the correct number of Notes', function () {
       return Promise.all([
-        Note.find(),
+        Note.find({ userId: user.id }),
         chai.request(app).get('/api/notes')
+          .set('Authorization', `Bearer ${token}`)
       ])
         .then(([data, res]) => {
           expect(res).to.have.status(200);
@@ -66,8 +79,9 @@ describe('Noteful API - Notes', function () {
 
     it('should return a list sorted desc with the correct right fields', function () {
       return Promise.all([
-        Note.find().sort({ updatedAt: 'desc' }),
+        Note.find({ userId: user.id }).sort({ updatedAt: 'desc' }),
         chai.request(app).get('/api/notes')
+          .set('Authorization', `Bearer ${token}`)
       ])
         .then(([data, res]) => {
           expect(res).to.have.status(200);
@@ -96,7 +110,8 @@ describe('Noteful API - Notes', function () {
         .sort({ updatedAt: 'desc' });
 
       const apiPromise = chai.request(app)
-        .get(`/api/notes?searchTerm=${searchTerm}`);
+        .get(`/api/notes?searchTerm=${searchTerm}`)
+        .set('Authorization', `Bearer ${token}`);
 
       return Promise.all([dbPromise, apiPromise])
         .then(([data, res]) => {
@@ -122,7 +137,8 @@ describe('Noteful API - Notes', function () {
       const dbPromise = Note
         .find({ $or: [{ title: re }, { content: re }] })
         .sort({ updatedAt: 'desc' });
-      const apiPromise = chai.request(app).get(`/api/notes?searchTerm=${searchTerm}`);
+      const apiPromise = chai.request(app).get(`/api/notes?searchTerm=${searchTerm}`)
+        .set('Authorization', `Bearer ${token}`);
 
       return Promise.all([dbPromise, apiPromise])
         .then(([data, res]) => {
@@ -150,6 +166,7 @@ describe('Noteful API - Notes', function () {
           return Promise.all([
             Note.find({ folderId: data.id }),
             chai.request(app).get(`/api/notes?folderId=${data.id}`)
+              .set('Authorization', `Bearer ${token}`)
           ]);
         })
         .then(([data, res]) => {
