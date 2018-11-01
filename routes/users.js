@@ -33,7 +33,7 @@ router.post('/', (req, res, next) => {
   const nonStringField = stringFields.find(field => field in req.body && typeof req.body[field] !== 'string');
 
   if (nonStringField) {
-    const err = new Error('Incorrect field type: string expected');
+    const err = new Error('Incorrect field type: expected string');
     err.status = 422;
     err.reason = 'ValidationError';
     err.location = `${nonStringField}`;
@@ -51,7 +51,7 @@ router.post('/', (req, res, next) => {
 
   // the username and password should not have leading or trailing whitespace. 
   // and the endpoint should not automatically trim the values.
-  const explicityTrimmedFields = ['username', 'password'];
+  const explicityTrimmedFields = ['username', 'password', 'fullname'];
   const nonTrimmedField = explicityTrimmedFields.find(
     field => req.body[field].trim() !== req.body[field]
   );
@@ -86,31 +86,31 @@ router.post('/', (req, res, next) => {
             req.body[field].trim().length > sizedFields[field].max
   );
 
-  // if (tooSmallField || tooLargeField) {
-  //   return res.status(422).json({
-  //     code: 422,
-  //     reason: 'ValidationError',
-  //     message: tooSmallField
-  //       ? `Must be at least ${sizedFields[tooSmallField]
-  //         .min} characters long`
-  //       : `Must be at most ${sizedFields[tooLargeField]
-  //         .max} characters long`,
-  //     location: tooSmallField || tooLargeField
-  //   });
-  // }
+  if (tooSmallField || tooLargeField) {
+    return res.status(422).json({
+      code: 422,
+      reason: 'ValidationError',
+      message: tooSmallField
+        ? `Must be at least ${sizedFields[tooSmallField]
+          .min} characters long`
+        : `Must be at most ${sizedFields[tooLargeField]
+          .max} characters long`,
+      location: tooSmallField || tooLargeField
+    });
+  }
 
   // *QUESTION - syntax to write the if block in this format? with the || operators.
-  if (tooSmallField || tooLargeField) {
-    const err = new Error(`${tooSmallField}`
-      ? `Must be at least ${sizedFields[tooSmallField]
-        .min} characters long`
-      : `Must be at most ${sizedFields[tooLargeField]
-        .max} characters long`);
-    err.status = 422;
-    err.location = `${tooSmallField}` || `${tooLargeField}`;
-    err.reason = 'ValidationError';
-    return next(err);
-  }
+  // if (tooSmallField || tooLargeField) {
+  //   const err = new Error(`${tooSmallField}`
+  //     ? `Must be at least ${sizedFields[tooSmallField]
+  //       .min} characters long`
+  //     : `Must be at most ${sizedFields[tooLargeField]
+  //       .max} characters long`);
+  //   err.status = 422;
+  //   err.location = `${tooSmallField}` || `${tooLargeField}`;
+  //   err.reason = 'ValidationError';
+  //   return next(err);
+  // }
 
 
   return User.hashPassword(password)
@@ -131,6 +131,8 @@ router.post('/', (req, res, next) => {
       if (err.code === 11000) {
         err = new Error('The username already exists');
         err.status = 400;
+        err.reason = 'ValidationError';
+        err.location = 'username';
       }
       next(err);
     });
