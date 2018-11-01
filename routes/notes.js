@@ -11,6 +11,10 @@ const passport = require('passport');
 router.use('/', passport.authenticate('jwt', { session: false, failWithError: true }));
 
 function validateFolderId(folderId, userId) {
+  if (folderId === undefined) {
+    return Promise.resolve();
+  }
+
   // verifies that folderId is a valid ObjectId
   if (!mongoose.Types.ObjectId.isValid(folderId)) {
     const err = new Error('The `folderId` is not valid');
@@ -30,6 +34,10 @@ function validateFolderId(folderId, userId) {
 }
 
 function validateTagId(tags, userId) {
+  if (tags === undefined) {
+    return Promise.resolve();
+  }
+  
   // verifies that the tags property is an Array
   if (!Array.isArray(tags)) {
     const err = new Error('The `tags` property must be an array');
@@ -46,7 +54,14 @@ function validateTagId(tags, userId) {
   }
 
   // verifies that all the tags belong to the current user
-  
+  return Tag.find({ $and: [{ _id: { $in: tags }, userId }]})
+    .then(results => {
+      if (tags.length !== results.length) {
+        const err = new Error('The `tags` array contains an invaild `id`');
+        err.status = 400;
+        return Promise.reject(err);
+      }
+    });
 }
 
 /* ========== GET/READ ALL ITEMS ========== */
@@ -128,7 +143,8 @@ router.post('/', (req, res, next) => {
     validateFolderId(newNote.folderId, userId),
     validateTagId(newNote.tags, userId)
   ])
-    .then(() => Note.create(newNote))
+    .then(() => 
+      Note.create(newNote))
     .then(result => {
       res.location(`${req.originalUrl}/${result.id}`).status(201).json(result);
     })
@@ -190,6 +206,7 @@ router.put('/:id', (req, res, next) => {
   ])
   // Note.findByIdAndUpdate(id, toUpdate, { new: true })
     .then(() => Note.findOneAndUpdate({ _id: id, userId }, toUpdate, { new: true }))
+    .populate('tags')
     .then(result => {
       if (result) {
         res.json(result);
