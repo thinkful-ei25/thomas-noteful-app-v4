@@ -174,7 +174,7 @@ describe('Noteful API - Users', function () {
             expect(res).to.have.status(422);
             expect(res.body.reason).to.equal('ValidationError');
             expect(res.body.message).to.equal(
-              'Must be at least 1 characters long'
+              'Username must be at least 1 characters long'
             );
             expect(res.body.location).to.equal('username');
           });
@@ -192,7 +192,7 @@ describe('Noteful API - Users', function () {
           .then((res) => {
             expect(res).to.have.status(422);
             expect(res.body.reason).to.equal('ValidationError');
-            expect(res.body.message).to.equal('Must be at least 8 characters long');
+            expect(res.body.message).to.equal('Password must be at least 8 characters long');
             expect(res.body.location).to.equal('password');
           });
       });
@@ -209,7 +209,7 @@ describe('Noteful API - Users', function () {
           .then((res) => {
             expect(res).to.have.status(422);
             expect(res.body.reason).to.equal('ValidationError');
-            expect(res.body.message).to.equal('Must be at most 72 characters long');
+            expect(res.body.message).to.equal('Password must be at most 72 characters long');
             expect(res.body.location).to.equal('password');
           });
       });
