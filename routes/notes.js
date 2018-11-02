@@ -206,7 +206,6 @@ router.put('/:id', (req, res, next) => {
   ])
   // Note.findByIdAndUpdate(id, toUpdate, { new: true })
     .then(() => Note.findOneAndUpdate({ _id: id, userId }, toUpdate, { new: true }))
-    .populate('tags')
     .then(result => {
       if (result) {
         res.json(result);
